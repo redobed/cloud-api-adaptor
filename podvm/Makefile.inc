@@ -68,7 +68,7 @@ KATA_AGENT_SRC = ../../../kata-containers/src/agent
 KATA_AGENT_BUILD_TYPE = release
 
 SKOPEO_SRC ?= skopeo
-SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo
+SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo.linux.$(ARCH)
 
 UMOCI_SRC   = umoci
 
