@@ -35,6 +35,9 @@ git:
   skopeo:
     url: https://github.com/containers/skopeo
     reference: v1.5.0
+  packer:
+    url: https://github.com/hashicorp/packer
+    reference: v1.9.4
 oci:
   pause:
     registry: docker://registry.k8s.io/pause

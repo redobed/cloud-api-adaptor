@@ -18,6 +18,7 @@ include $(ROOT_DIR)Makefile.defaults
 
 IMAGE_PREFIX := podvm
 
+PLATFORM    := $(shell uname)
 HOST_ARCH   := $(shell uname -m)
 ARCH        := $(or $(ARCH),$(HOST_ARCH))
 # Normalise x86_64 / amd64 for input ARCH
@@ -69,6 +70,9 @@ KATA_AGENT_BUILD_TYPE = release
 
 SKOPEO_SRC ?= skopeo
 SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo.linux.$(ARCH)
+
+# PACKER_SRC ?= packer
+# PACKER_BIN ?= $(PACKER_SRC)/bin/packer
 
 UMOCI_SRC   = umoci
 
@@ -123,6 +127,18 @@ $(SKOPEO_SRC):
 
 $(SKOPEO_BIN): $(SKOPEO_SRC)
 	cd "$(SKOPEO_SRC)" && CC= $(MAKE) "bin/skopeo.linux.$(ARCH)"
+
+# Packer doesn't does not have prebuilt s390x arch binaries above Packer version 0.1.5 
+$(PACKER_SRC):
+	$(call git_clone_repo_ref,$(PACKER_REPO),$(PACKER_SRC),$(PACKER_VERSION))
+
+$(PACKER_BIN): $(PACKER_SRC)
+	cd "$(PACKER_SRC)"
+	# build for only the relevant platform and arch
+	sed -i -- "s/ALL_XC_ARCH=.*/ALL_XC_ARCH=\"${DEB_ARCH}\"/g" scripts/build.sh
+	sed -i -- "s/ALL_XC_OS=.*/ALL_XC_OS=\"${PLATFORM}\"/g" scripts/build.sh
+	# replace cp with mv after tests
+	CC= $(MAKE) bin && cp bin/packer /usr/bin/
 
 # The umoci release page only publishes amd64 binaries. https://github.com/opencontainers/umoci/releases
 $(UMOCI_SRC):

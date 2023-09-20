@@ -1,7 +1,7 @@
 locals {
-   machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
-   use_pflash = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
-   firmware = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}"  : ""
+   machine_type = "${var.os_arch}" == "s390x" ? "s390-ccw-virtio" : "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
+   use_pflash = "${var.os_arch}" == "s390x" && "${var.is_uefi}" ? "true" : "false"
+   firmware = "${var.os_arch}" == "s390x" && "${var.is_uefi}" ? "${var.uefi_firmware}"  : ""
 }
 
 source "qemu" "rhel" {
@@ -14,7 +14,7 @@ source "qemu" "rhel" {
   iso_checksum      = "${var.cloud_image_checksum}"
   iso_url           = "${var.cloud_image_url}"
   output_directory  = "output"
-  qemuargs          = [["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-cdrom", "${var.cloud_init_image}"], ["-serial", "mon:stdio"], ["-cpu", "Cascadelake-Server"]]
+  qemuargs          = [["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-cdrom", "${var.cloud_init_image}"], ["-serial", "mon:stdio"]]
   ssh_password      = "${var.ssh_password}"
   ssh_port          = 22
   ssh_username      = "${var.ssh_username}"
@@ -24,7 +24,7 @@ source "qemu" "rhel" {
   shutdown_command  = "sudo shutdown -h now"
   machine_type      = "${local.machine_type}"
   use_pflash        = "${local.use_pflash}"
-  firmware          = "${local.firmware}"
+  qemu_binary       = "qemu-system-${var.os_arch}"
 }
 
 build {
@@ -77,15 +77,3 @@ build {
     destination = "~/misc-settings.sh"
   }
 
-  provisioner "shell" {
-    remote_folder = "~"
-    environment_vars = [
-        "CLOUD_PROVIDER=${var.cloud_provider}",
-        "PODVM_DISTRO=${var.podvm_distro}",
-        "DISABLE_CLOUD_CONFIG=${var.disable_cloud_config}"
-	]
-    inline = [
-      "sudo -E bash ~/misc-settings.sh"
-    ]
-  }
-}
