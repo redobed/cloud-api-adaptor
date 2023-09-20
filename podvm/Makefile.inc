@@ -58,6 +58,7 @@ KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
 PAUSE         = $(FILES_DIR)/$(PAUSE_BUNDLE)/rootfs/pause
 ATTESTATION_AGENT = $(FILES_DIR)/usr/local/bin/attestation-agent
 PROCESS_USER_DATA = $(FILES_DIR)/usr/local/bin/process-user-data
+PACKER = $(FILES_DIR)/usr/local/bin/packer
 
 # Allow BINARIES to be overriden externally
 
@@ -71,8 +72,8 @@ KATA_AGENT_BUILD_TYPE = release
 SKOPEO_SRC ?= skopeo
 SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo.linux.$(ARCH)
 
-# PACKER_SRC ?= packer
-# PACKER_BIN ?= $(PACKER_SRC)/bin/packer
+PACKER_SRC ?= packer
+PACKER_BIN ?= $(PACKER_SRC)/bin/packer
 
 UMOCI_SRC   = umoci
 
@@ -129,16 +130,12 @@ $(SKOPEO_BIN): $(SKOPEO_SRC)
 	cd "$(SKOPEO_SRC)" && CC= $(MAKE) "bin/skopeo.linux.$(ARCH)"
 
 # Packer doesn't does not have prebuilt s390x arch binaries above Packer version 0.1.5 
-$(PACKER_SRC):
+$(PACKER):
 	$(call git_clone_repo_ref,$(PACKER_REPO),$(PACKER_SRC),$(PACKER_VERSION))
-
-$(PACKER_BIN): $(PACKER_SRC)
-	cd "$(PACKER_SRC)"
-	# build for only the relevant platform and arch
-	sed -i -- "s/ALL_XC_ARCH=.*/ALL_XC_ARCH=\"${DEB_ARCH}\"/g" scripts/build.sh
-	sed -i -- "s/ALL_XC_OS=.*/ALL_XC_OS=\"${PLATFORM}\"/g" scripts/build.sh
+	sed -i -- "s/ALL_XC_ARCH=.*/ALL_XC_ARCH=\"${DEB_ARCH}\"/g" $(PACKER_SRC)/scripts/build.sh
+	sed -i -- "s/ALL_XC_OS=.*/ALL_XC_OS=\"${PLATFORM}\"/g" $(PACKER_SRC)/scripts/build.sh
 	# replace cp with mv after tests
-	CC= $(MAKE) bin && cp bin/packer /usr/bin/
+	cd "$(PACKER_SRC)" && CC= $(MAKE) bin
 
 # The umoci release page only publishes amd64 binaries. https://github.com/opencontainers/umoci/releases
 $(UMOCI_SRC):
@@ -147,7 +144,7 @@ $(UMOCI_SRC):
 $(UMOCI_SRC)/umoci: $(UMOCI_SRC)
 	cd "$(UMOCI_SRC)" && CC= $(MAKE)
 
-$(PAUSE_SRC): $(SKOPEO_BIN)
+$(PAUSE_SRC): $(SKOPEO_BIN) 
 	$(SKOPEO_BIN) --override-arch $(DEB_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
 
 $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
