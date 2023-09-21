@@ -76,4 +76,4 @@ build {
     source      = "qcow2/misc-settings.sh"
     destination = "~/misc-settings.sh"
   }
-
+}
