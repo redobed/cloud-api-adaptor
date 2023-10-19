@@ -1,8 +1,7 @@
 locals {
   machine_type = "${var.os_arch}" == "s390x" ? "s390-ccw-virtio" : "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
   use_pflash   = "${var.os_arch}" == "s390x" && "${var.is_uefi}" ? "true" : "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
-  firmware = "${var.os_arch}" == "s390x" && "${var.is_uefi}" ? "${var.uefi_firmware}"  : ""
-  firmware = "${var.os_arch}" == "s390x" && "${var.is_uefi}" ? "${var.uefi_firmware}"  : "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
+  firmware     = "${var.os_arch}" == "s390x" && "${var.is_uefi}" ? "${var.uefi_firmware}" : "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
 }
 
 source "qemu" "rhel" {
