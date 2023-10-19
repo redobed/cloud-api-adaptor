@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -27,6 +28,7 @@ var errNotReady = errors.New("address not ready")
 const (
 	maxInstanceNameLen = 63
 	maxWaitTime        = 120 * time.Second
+	defaultCVMInstance = "m6a.large"
 )
 
 // Make ec2Client a mockable interface
@@ -143,15 +145,28 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	// Public IP address
 	var publicIPAddr netip.Addr
 
+	var b64EncData string
+
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
-	userData, err := cloudConfig.Generate()
+	cloudConfigData, err := cloudConfig.Generate()
 	if err != nil {
 		return nil, err
 	}
 
-	//Convert userData to base64
-	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
+	if !p.serviceConfig.DisableCloudConfig {
+		//Convert userData to base64
+		b64EncData = base64.StdEncoding.EncodeToString([]byte(cloudConfigData))
+	} else {
+		userData := strings.Split(cloudConfigData, "content: |")[1]
+		// Take the data in {} after content: and ignore the rest
+		// ToDo: use a regex
+		userData = strings.Split(userData, "- path")[0]
+		userData = strings.TrimSpace(userData)
+
+		//Convert userData to base64
+		b64EncData = base64.StdEncoding.EncodeToString([]byte(userData))
+	}
 
 	instanceType, err := p.selectInstanceType(ctx, spec)
 	if err != nil {
@@ -190,7 +205,7 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			LaunchTemplate: &types.LaunchTemplateSpecification{
 				LaunchTemplateName: aws.String(p.serviceConfig.LaunchTemplateName),
 			},
-			UserData:          &userDataEnc,
+			UserData:          &b64EncData,
 			TagSpecifications: tagSpecifications,
 		}
 	} else {
@@ -201,7 +216,7 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			InstanceType:      types.InstanceType(instanceType),
 			SecurityGroupIds:  p.serviceConfig.SecurityGroupIds,
 			SubnetId:          aws.String(p.serviceConfig.SubnetId),
-			UserData:          &userDataEnc,
+			UserData:          &b64EncData,
 			TagSpecifications: tagSpecifications,
 		}
 		if p.serviceConfig.KeyName != "" {
@@ -226,6 +241,24 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			input.SecurityGroupIds = nil
 
 		}
+
+		// Ref: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/snp-work.html
+		// Use the following CLI command to retrieve the list of instance types that support AMD SEV-SNP:
+		// aws ec2 describe-instance-types \
+		//--filters Name=processor-info.supported-features,Values=amd-sev-snp \
+		//--query 'InstanceTypes[*].InstanceType'
+		// Using AMD SEV-SNP requires an AMI with uefi or uefi-preferred boot enabled
+		if !p.serviceConfig.DisableCVM {
+			//  Add AmdSevSnp Cpu options to the instance
+			input.CpuOptions = &types.CpuOptionsRequest{
+				// Add AmdSevSnp Cpu options to the instance
+				AmdSevSnp: types.AmdSevSnpSpecificationEnabled,
+			}
+
+			// Change the default instance type to a CVM capable instance type
+			p.serviceConfig.InstanceType = defaultCVMInstance
+		}
+
 	}
 
 	// Add block device mappings to the instance to set the root volume size

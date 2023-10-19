@@ -43,7 +43,7 @@ The builder image packages the cloud-api-adaptor and Kata Containers sources as 
 the binaries (e.g. *kata-agent* and *agent-protocol-forwarder*) that should be installed in the podvm image.
 
 The builder image is agnostic to cloud providers in the sense that one can be used to build for multiple providers, however it is
-dependent on the Linux distribution the image is built for. Therefore, in this directory you will find dockerfiles for each supported distributions, which are currently Ubuntu 20.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)), CentOS Stream 8 ([Dockerfile.podvm_builder.centos](./Dockerfile.podvm_builder.centos)), and RHEL 8.7 ([Dockerfile.podvm_builder.rhel](./Dockerfile.podvm_builder.rhel)).
+dependent on the Linux distribution the image is built for. Therefore, in this directory you will find dockerfiles for each supported distributions, which are currently Ubuntu 20.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)), CentOS Stream 9 ([Dockerfile.podvm_builder.centos](./Dockerfile.podvm_builder.centos)), and RHEL 9 ([Dockerfile.podvm_builder.rhel](./Dockerfile.podvm_builder.rhel)).
 
 As an example, to build the builder image for Ubuntu, run:
 
@@ -61,7 +61,7 @@ currently accepted:
 | CAA\_SRC\_REF     | main                                                         | cloud-api-adaptor repository branch or commit                   |
 | KATA\_SRC         | https://github.com/kata-containers/kata-containers           | The Kata Containers source repository                           |
 | KATA\_SRC\_BRANCH | CCv0                                                         | The Kata Containers repository branch                           |
-| GO\_VERSION       | 1.20.8                                                       | Go version                                                      |
+| GO\_VERSION       | 1.20.10                                                      | Go version                                                      |
 | PROTOC\_VERSION   | 3.11.4                                                       | [Protobuf](https://github.com/protocolbuffers/protobuf) version |
 | RUST\_VERSION     | 1.72.0                                                       | Rust version                                                    |
 

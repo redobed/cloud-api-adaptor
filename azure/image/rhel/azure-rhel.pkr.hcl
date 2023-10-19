@@ -1,3 +1,12 @@
+packer {
+  required_plugins {
+    azure = {
+      version = ">= 2.0.0"
+      source  = "github.com/hashicorp/azure"
+    }
+  }
+}
+
 source "azure-arm" "rhel" {
 
   plan_info {
@@ -20,6 +29,14 @@ source "azure-arm" "rhel" {
   managed_image_name                = "${var.az_image_name}"
   managed_image_resource_group_name = "${var.resource_group}"
   build_resource_group_name         = "${var.resource_group}"
+
+  shared_image_gallery_destination {
+    subscription   = "${var.subscription_id}"
+    resource_group = "${var.resource_group}"
+    gallery_name   = "${var.az_gallery_name}"
+    image_name     = "${var.az_gallery_image_name}"
+    image_version  = "${var.az_gallery_image_version}"
+  }
 }
 
 build {

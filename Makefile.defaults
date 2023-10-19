@@ -1,9 +1,15 @@
-ifeq (, $(shell command -v yq 2> /dev/null))
-$(error "No yq on PATH, consider doing snap install yq")
+YQ_COMMAND ?= yq
+VERSIONS_SRC := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/versions.yaml
+
+ifeq (, $(shell command -v $(YQ_COMMAND) 2> /dev/null))
+$(error "$(YQ_COMMAND) not found, consider doing snap install yq")
 endif
 
-YQ_COMMAND     := yq
-VERSIONS_SRC := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/versions.yaml
+YQ_MAJOR_VERSION := $(shell $(YQ_COMMAND) --version | sed -nE 's/.* v?([0-9]+).*/\1/p')
+
+ifneq (4, $(YQ_MAJOR_VERSION))
+$(error "yq major version should be 4, is: $(YQ_MAJOR_VERSION)")
+endif
 
 define query
 $(or $(shell $(YQ_COMMAND) '.$(1) | select(. != null)' $(VERSIONS_SRC)), \
@@ -11,7 +17,8 @@ $(or $(shell $(YQ_COMMAND) '.$(1) | select(. != null)' $(VERSIONS_SRC)), \
 endef
 
 ubuntu_RELEASE ?= focal
-centos_RELEASE ?= stream-8
+centos_RELEASE ?= stream-9
+rhel_RELEASE ?= 9
 
 ubuntu_amd64_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.url)
 ubuntu_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.checksum)
@@ -19,6 +26,8 @@ ubuntu_s390x_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).s390x.u
 ubuntu_s390x_IMAGE_CHECKSUM := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).s390x.checksum)
 centos_amd64_IMAGE_URL := $(call query,cloudimg.centos.$(centos_RELEASE).amd64.url)
 centos_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.centos.$(centos_RELEASE).amd64.checksum)
+rhel_amd64_IMAGE_URL := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.url)
+rhel_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.checksum)
 
 CAA_SRC := $(or $(CAA_SRC),$(call query,git.cloud-api-adaptor.url))
 CAA_SRC_REF := $(or $(CAA_SRC_REF),$(call query,git.cloud-api-adaptor.reference))
