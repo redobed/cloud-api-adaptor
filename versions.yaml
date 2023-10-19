@@ -40,7 +40,7 @@ git:
     reference: v0.4.7
   skopeo:
     url: https://github.com/containers/skopeo
-    reference: v1.5.0
+    reference: v1.13.3
 oci:
   pause:
     registry: docker://registry.k8s.io/pause
