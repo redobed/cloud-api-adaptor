@@ -1,7 +1,8 @@
 locals {
-  machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
-  use_pflash   = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
-  firmware     = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
+  machine_type = "${var.os_arch}" == "s390x" ? "s390-ccw-virtio" : "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
+  use_pflash   = "${var.os_arch}" == "s390x" && "${var.is_uefi}" ? "true" : "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
+  firmware     = "${var.os_arch}" == "s390x" && "${var.is_uefi}" ? "${var.uefi_firmware}" : "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
+  qemuargs_cpu = "${var.os_arch}" == "x86_64" ? "["-cpu", "Cascadelake-Server"]
 }
 
 source "qemu" "rhel" {
@@ -14,7 +15,7 @@ source "qemu" "rhel" {
   iso_checksum     = "${var.cloud_image_checksum}"
   iso_url          = "${var.cloud_image_url}"
   output_directory = "output"
-  qemuargs         = [["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-cdrom", "${var.cloud_init_image}"], ["-serial", "mon:stdio"], ["-cpu", "Cascadelake-Server"]]
+  qemuargs         = [["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-cdrom", "${var.cloud_init_image}"], ["-serial", "mon:stdio"], "${local.firmware}" , "${qemuargs_cpu}"]
   ssh_password     = "${var.ssh_password}"
   ssh_port         = 22
   ssh_username     = "${var.ssh_username}"
