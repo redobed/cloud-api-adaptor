@@ -21,19 +21,6 @@ ENV SMDEV_CONTAINER_OFF=1
 
 # This registering RHEL when building on an unsubscribed system
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
-# RUN if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
-#     export SMDEV_CONTAINER_OFF=1; \
-#     subscription-manager register --org=${ORG_ID} --activationkey=${ACTIVATION_KEY}; \
-#     subscription-manager repos --enable codeready-builder-for-rhel-9-${ARCH}-rpms; \
-#     dnf groupinstall -y 'Development Tools'; \
-#     dnf install -y yum-utils gnupg git --allowerasing curl pkg-config clang perl libseccomp-devel gpgme-devel \
-#         device-mapper-devel qemu-kvm unzip wget libassuan-devel genisoimage cloud-utils-growpart cloud-init; \
-#     else \
-#     dnf groupinstall -y 'Development Tools'; \
-#     dnf install -y yum-utils gnupg git --allowerasing curl pkg-config clang perl libseccomp-devel gpgme-devel \
-#         device-mapper-devel qemu-kvm unzip wget libassuan-devel genisoimage cloud-utils-growpart cloud-init; \
-#     fi
-
 RUN if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
     subscription-manager register --org=${ORG_ID} --activationkey=${ACTIVATION_KEY}; \
     fi
