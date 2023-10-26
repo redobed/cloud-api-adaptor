@@ -31,7 +31,7 @@ RUN subscription-manager repos --enable codeready-builder-for-rhel-9-${ARCH}-rpm
     device-mapper-devel qemu-kvm unzip wget libassuan-devel genisoimage cloud-utils-growpart cloud-init; 
 
 RUN if [ "${ARCH}" == "x86_64" ]; then export ARCH="amd64"; fi; \
-    curl https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH} -o /usr/local/bin/yq; \
+    wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH} -O /usr/local/bin/yq && \
     chmod a+x /usr/local/bin/yq && \
     curl https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz -o go${GO_VERSION}.linux-${ARCH}.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && \
