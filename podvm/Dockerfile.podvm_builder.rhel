@@ -7,32 +7,33 @@
 #
 FROM registry.access.redhat.com/ubi9/ubi:9.2
 
-ARG ARCH="amd64"
+ARG ARCH="x86_64"
 ARG PACKER_VERSION="v1.9.4"
 ARG GO_VERSION="1.20.10"
 ARG PROTOC_VERSION="3.11.4"
-ARG PROTOC_ARCH="x86_64"
 ARG RUST_VERSION="1.72.0"
 ARG ORG_ID
 ARG ACTIVATION_KEY
 ARG YQ_VERSION="v4.35.1"
 
 ENV SMDEV_CONTAINER_OFF=1
+ENV ARCH ${ARCH}
 
 # This registering RHEL when building on an unsubscribed system
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
 RUN if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
     subscription-manager register --org=${ORG_ID} --activationkey=${ACTIVATION_KEY}; \
     fi
+    
 RUN subscription-manager repos --enable codeready-builder-for-rhel-9-${ARCH}-rpms; \
     dnf groupinstall -y 'Development Tools'; \
     dnf install -y yum-utils gnupg git --allowerasing curl pkg-config clang perl libseccomp-devel gpgme-devel \
     device-mapper-devel qemu-kvm unzip wget libassuan-devel genisoimage cloud-utils-growpart cloud-init; 
 
-ADD https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH} /usr/local/bin/yq
-RUN chmod a+x /usr/local/bin/yq
- 
-RUN curl https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz -o go${GO_VERSION}.linux-${ARCH}.tar.gz && \
+RUN if [ "${ARCH}" == "x86_64" ]; then export ARCH="amd64"; fi \
+    curl https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH} /usr/local/bin/yq; \
+    chmod a+x /usr/local/bin/yq \
+    curl https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz -o go${GO_VERSION}.linux-${ARCH}.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && \
     rm -f go${GO_VERSION}.linux-${ARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:${PATH}"
@@ -50,7 +51,7 @@ RUN if [ "${ARCH}" == "s390x" ]; then \
     dnf install -y packer; \
     fi
 
-# set a corrspond qemu-system-* named link to qemu-kvm
+# set a correspond qemu-system-* named link to qemu-kvm
 RUN ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-$(uname -m)
 
 # cloud-utils package is not available for rhel.
@@ -61,13 +62,14 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VER
 
 ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
-RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip && \
-    unzip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
+RUN if [ "${ARCH}" == "s390x" ]; then export ARCH="s390_64"; fi \
+    wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${ARCH}.zip && \
+    unzip protoc-${PROTOC_VERSION}-linux-${ARCH}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${ARCH}.zip
 
 WORKDIR /src
 
-ARG CAA_SRC="https://github.com/redobed/cloud-api-adaptor"
-ARG CAA_SRC_REF="podvm-rhel-z"
+ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
+ARG CAA_SRC_REF="main"
 
 ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
 ARG KATA_SRC_BRANCH="CCv0"
