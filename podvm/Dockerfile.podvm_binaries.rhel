@@ -12,17 +12,6 @@ ARG PODVM_DISTRO=rhel
 ARG AA_KBC="offline_fs_kbc"
 # If not provided, uses system architecture
 ARG ARCH
-<<<<<<< HEAD
-ARG CAA_SRC
-ARG CAA_SRC_REF
-ARG IMAGE_URL="/tmp/rhel.qcow2"
-ARG IMAGE_CHECKSUM
-
-ENV IMAGE_URL ${IMAGE_URL}
-ENV IMAGE_CHECKSUM ${IMAGE_CHECKSUM}
-ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
-=======
->>>>>>> origin/main
 ENV PODVM_DISTRO ${PODVM_DISTRO}
 ENV AA_KBC ${AA_KBC}
 ENV ARCH ${ARCH}
