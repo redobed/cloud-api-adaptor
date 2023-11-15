@@ -8,8 +8,10 @@ ARG BASE=registry.fedoraproject.org/fedora:38
 # that was specified with --platform. For more details see:
 # https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
 FROM --platform=$BUILDPLATFORM $BUILDER_BASE as builder-release
+# For `dev` builds due to CGO constraints we have to emulate the target platform
+# instead of using Go's cross-compilation
+FROM --platform=$TARGETPLATFORM $BUILDER_BASE as builder-dev
 
-FROM builder-release as builder-dev
 RUN dnf install -y libvirt-devel && dnf clean all
 
 FROM builder-${BUILD_TYPE} AS builder
@@ -17,14 +19,18 @@ ARG RELEASE_BUILD
 ARG COMMIT
 ARG VERSION
 ARG TARGETARCH
+ARG YQ_VERSION
+
+RUN go install github.com/mikefarah/yq/v4@$YQ_VERSION
+
 WORKDIR /work
 COPY go.mod go.sum ./
 RUN go mod download
-COPY entrypoint.sh Makefile ./
+COPY entrypoint.sh Makefile Makefile.defaults versions.yaml ./
 COPY cmd   ./cmd
 COPY pkg   ./pkg
 COPY proto ./proto
-RUN make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor
+RUN CC=gcc make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor
 
 FROM --platform=$TARGETPLATFORM $BASE as base-release
 

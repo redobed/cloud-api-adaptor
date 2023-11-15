@@ -65,10 +65,21 @@ func (aa AWSAssert) HasPodVM(t *testing.T, id string) {
 	}
 }
 
+func (aa AWSAssert) getInstanceType(t *testing.T, podName string) (string, error) {
+	// Get Instance Type of PodVM
+	return "", nil
+}
+
 func TestAwsCreateSimplePod(t *testing.T) {
 	assert := NewAWSAssert()
 
 	doTestCreateSimplePod(t, assert)
+}
+
+func TestAwsCreateSimplePodWithNydusAnnotation(t *testing.T) {
+	assert := NewAWSAssert()
+
+	doTestCreateSimplePodWithNydusAnnotation(t, assert)
 }
 
 func TestAwsCreatePodWithConfigMap(t *testing.T) {

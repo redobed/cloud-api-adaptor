@@ -1,6 +1,8 @@
 # (C) Copyright Confidential Containers Contributors
 # SPDX-License-Identifier: Apache-2.0
 
+include Makefile.defaults
+
 .PHONY: all build check fmt vet clean image deploy delete
 
 SHELL = bash -o pipefail
@@ -152,15 +154,19 @@ clean: ## Remove binaries.
 
 .PHONY: image
 image: .git-commit ## Build and push docker image to $registry
-	COMMIT=$(COMMIT) VERSION=$(VERSION) hack/build.sh
+	COMMIT=$(COMMIT) VERSION=$(VERSION) YQ_VERSION=$(YQ_VERSION) YQ_CHECKSUM=$(YQ_CHECKSUM) hack/build.sh -i
+
+.PHONY: image-with-arch
+image-with-arch: .git-commit ## Build the per arch image
+	COMMIT=$(COMMIT) VERSION=$(VERSION) YQ_VERSION=$(YQ_VERSION) YQ_CHECKSUM=$(YQ_CHECKSUM) hack/build.sh -a
 
 ##@ Deployment
 
 .PHONY: deploy
 deploy: ## Deploy cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
 ifneq ($(CLOUD_PROVIDER),)
-	kubectl apply -k "github.com/confidential-containers/operator/config/default"
-	kubectl apply -k "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods"
+	kubectl apply -k "github.com/confidential-containers/operator/config/default?ref=v0.8.0"
+	kubectl apply -k "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods?ref=v0.8.0"
 	kubectl apply -k install/overlays/$(CLOUD_PROVIDER)
 else
 	$(error CLOUD_PROVIDER is not set)
@@ -179,3 +185,48 @@ ifneq ($(CLOUD_PROVIDER),)
 else
 	$(error CLOUD_PROVIDER is not set)
 endif
+
+### PODVM IMAGE BUILDING ###
+
+REGISTRY ?= quay.io/confidential-containers
+
+PODVM_DISTRO ?= ubuntu
+
+PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO):$(VERSIONS_HASH)
+PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(VERSIONS_HASH)
+PODVM_IMAGE ?= $(REGISTRY)/podvm-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(ARCH):$(VERSIONS_HASH)
+
+PUSH ?= false
+# If not pushing `--load` into the local docker cache
+DOCKER_OPTS := $(if $(filter $(PUSH),true),--push,--load) $(EXTRA_DOCKER_OPTS)
+
+DOCKERFILE_SUFFIX := $(if $(filter $(PODVM_DISTRO),ubuntu),,.$(PODVM_DISTRO))
+BUILDER_DOCKERFILE := Dockerfile.podvm_builder$(DOCKERFILE_SUFFIX)
+BINARIES_DOCKERFILE := Dockerfile.podvm_binaries$(DOCKERFILE_SUFFIX)
+PODVM_DOCKERFILE := Dockerfile.podvm$(DOCKERFILE_SUFFIX)
+
+podvm-builder:
+	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
+	--build-arg GO_VERSION=$(GO_VERSION) \
+	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
+	--build-arg RUST_VERSION=$(RUST_VERSION) \
+	--build-arg YQ_VERSION=$(YQ_VERSION) \
+	--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
+	$(DOCKER_OPTS) .
+
+podvm-binaries:
+	docker buildx build -t $(PODVM_BINARIES_IMAGE) -f podvm/$(BINARIES_DOCKERFILE) \
+	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
+	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
+	--build-arg ARCH=$(ARCH) \
+	--build-arg AA_KBC=$(AA_KBC) \
+	$(DOCKER_OPTS) .
+
+podvm-image:
+	docker buildx build -t $(PODVM_IMAGE) -f podvm/$(PODVM_DOCKERFILE) \
+	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
+	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
+	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
+	--build-arg ARCH=$(ARCH) \
+	--build-arg CLOUD_PROVIDER=$(or $(CLOUD_PROVIDER),generic) \
+	$(DOCKER_OPTS) .

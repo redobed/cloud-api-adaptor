@@ -29,6 +29,11 @@ func TestCreateSimplePodAzure(t *testing.T) {
 	doTestCreateSimplePod(t, assert)
 }
 
+func TestCreateSimplePodWithNydusAnnotationAzure(t *testing.T) {
+	t.Parallel()
+	doTestCreateSimplePodWithNydusAnnotation(t, assert)
+}
+
 func TestCreatePodWithConfigMapAzure(t *testing.T) {
 	t.Parallel()
 	doTestCreatePodWithConfigMap(t, assert)
@@ -70,4 +75,9 @@ func (c AzureCloudAssert) HasPodVM(t *testing.T, id string) {
 		log.Infof("Virtual machine %s not found in resource group %s", id, rg)
 		t.Error("PodVM was not created")
 	}
+}
+
+func (c AzureCloudAssert) getInstanceType(t *testing.T, podName string) (string, error) {
+	// Get Instance Type of PodVM
+	return "", nil
 }
